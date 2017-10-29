@@ -1,4 +1,6 @@
-foo <- function(connection) {
+analisis <- function(connection) {
+  require(RPostgreSQL)
+  require(magrittr)
   est <- dbGetQuery(connection, "SELECT carne, ano, nombre_curso, sigla 
                     FROM cursos 
                     WHERE sigla = 'XS1110' OR sigla = 'XS0111';")
@@ -6,9 +8,9 @@ foo <- function(connection) {
   u <- unique(est$ano)
   u <- u[order(u)]
   M <- length(u)
-  df <- data.frame(matrix(0, ncol = M, nrow = M + 1), 
-                   row.names = c(as.character(u), "Graduados"))
-  colnames(df) <- as.character(u)
+  df <- data.frame(matrix(0, ncol = M + 1, nrow = M), 
+                   row.names = as.character(u))
+  colnames(df) <- c(as.character(u), "Graduados")
   for(j in 1:M) {
     est. <- subset(est1, x == u[j])$Group.1
     l <- list()
@@ -32,19 +34,33 @@ foo <- function(connection) {
       df[j, w] <- l[i]
     }
   }
-  grad <- dbGetQuery(connection, "SELECT carne, EXTRACT(year FROM fecha_juramentacion) AS ano
-                   FROM graduados;")
-  est1$graduados <- 0
-  for(k in 1:nrow(est1)) {
-    if(est1$Group.1[k] %in% grad$carne) {
-      wh <- which(grad$carne == est1$Group.1[k])
-      est1$graduados[k] <- grad$ano[wh]
+  grad <- dbGetQuery(connection, "SELECT carne FROM graduados;")
+  for(i in 1:nrow(grad)) {
+    if(grepl("^[0-9]", grad[i, 1])) {
+      grad[i, 1] <- NA
     }
   }
-  d <- aggregate(est1$Group.1, by = list(est1$graduados), FUN = length)
-  d <- d[-1, ]
-  for(i in 1:nrow(d)) {
-    df[nrow(df), which(colnames(df) == as.character(d$Group.1[i]))] <- d$x[i]
+  grad %<>% na.omit()
+  for(i in 1:nrow(grad)) {
+    grad[i, 1] %<>% gsub("A", "200", .) %>%
+                    gsub("B", "201", .) %>%
+                    substr(., 1, 4)
   }
+  gradl <- table(grad)
+  for(i in 1:length(gradl)) {
+    df[which(rownames(df) == names(gradl)[i]), ncol(df)] <- as.numeric(gradl[i])
+  }
+  #est1$graduados <- 0
+  #for(k in 1:nrow(est1)) {
+  #  if(est1$Group.1[k] %in% grad$carne) {
+  #    wh <- which(grad$carne == est1$Group.1[k])
+  #    est1$graduados[k] <- grad$ano[wh]
+  #  }
+  #}
+  #d <- aggregate(est1$Group.1, by = list(est1$graduados), FUN = length)
+  #d <- d[-1, ]
+  #for(i in 1:nrow(d)) {
+  #  df[nrow(df), which(colnames(df) == as.character(d$Group.1[i]))] <- d$x[i]
+  #}
   return(df)
 }

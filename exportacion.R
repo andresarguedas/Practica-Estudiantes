@@ -1,9 +1,11 @@
-library(readxl)
+c("#698B22")library(readxl)
 library(magrittr)
 library(dplyr)
 library(lubridate)
 library(RPostgreSQL)
 library(readr)
+
+options(scipen = 999)
 
 Graduados <- read_excel("F:/Practica II/Graduados.xlsx")
 Cursos <- read_excel("F:/Practica II/Historial de calificaciones.xlsx")
@@ -47,7 +49,7 @@ Estudiantes$canton %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
 Estudiantes$distrito %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
 
 conn <- dbConnect(PostgreSQL(), host = "localhost", user = "postgres", 
-                  dbname="estudiantes", password = "")
+                  dbname = "estudiantes", password = "")
 
 postgresqlpqExec(conn, "SET client_encoding = 'windows-1252'")
 
@@ -87,7 +89,7 @@ table(l2)
 grad <- dbGetQuery(conn, "SELECT carne, EXTRACT(year FROM fecha_juramentacion) AS ano
                    FROM graduados;")
 
-# Agregando nuevos datos:
+# Agregando nuevos datos: del 2015
 
 grad2015<- read_delim("F:/Practica II/Estudiantes graduados escuela de Estadística, años 2015 y 2016.csv", ";", escape_double = FALSE, trim_ws = TRUE)
 
@@ -161,4 +163,189 @@ names(cur2015.)[7] <- "nota_ordinaria_num"
 cur2015. <- cur2015.[, c(11, 1, 5, 4, 6, 8, 9, 7, 10, 3, 2)]
 
 dbWriteTable(conn, "cursos", value = cur2015., append = TRUE, 
+             row.names = FALSE)
+
+
+# Estudiantes del 2014:
+
+est <- dbGetQuery(conn, "SELECT * FROM estudiantes;")
+est$fecha_nacimiento %<>% as.Date() %>% ymd()
+
+est20141 <- read_delim("F:/Practica II/Estudiantes I - 2014.csv", 
+                       ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(est20141) %<>% tolower()
+s <- est20141$carne
+s1 <- grep("^[0-9]", s, value = F)
+s[s1] <- paste("19", substr(s[s1], 1, 2), sep = "")
+s %<>% gsub("A", "200", .)
+s %<>% gsub("B", "201", .)
+s %<>% substr(., 1, 4)
+
+est20141$ano_ingreso_ucr <- s
+
+est20141$fecha_nacimiento %<>% dmy()
+est20141$fecha_nacimiento %<>% ymd()
+est20141$canton %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+est20141$distrito %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+est20141$provincia %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+
+est. <- anti_join(est20141, est, by = "carne")
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM estudiantes;")
+M %<>% as.numeric()
+
+est.$id <- seq(M + 1, M + nrow(est.))
+
+est. <- est.[, c(13, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)]
+
+dbWriteTable(conn, "estudiantes", value = est., append = TRUE, 
+             row.names = FALSE)
+
+est <- dbGetQuery(conn, "SELECT * FROM estudiantes;")
+est$fecha_nacimiento %<>% as.Date() %>% ymd()
+
+est20142 <- read_delim("F:/Practica II/Estudiantes II - 2014.csv", 
+                       ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(est20142) %<>% tolower()
+s <- est20142$carne
+s1 <- grep("^[0-9]", s, value = F)
+s[s1] <- paste("19", substr(s[s1], 1, 2), sep = "")
+s %<>% gsub("A", "200", .)
+s %<>% gsub("B", "201", .)
+s %<>% substr(., 1, 4)
+
+est20142$ano_ingreso_ucr <- s
+
+est20142$fecha_nacimiento %<>% dmy()
+est20142$fecha_nacimiento %<>% ymd()
+est20142$canton %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+est20142$distrito %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+est20142$provincia %<>% chartr('ÁÉÍÓÚÑ','AEIOUN', .)
+
+est20142 <- est20142[, -c(2, 3)]
+
+est.. <- anti_join(est20142, est, by = "carne")
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM estudiantes;")
+M %<>% as.numeric()
+
+est..$id <- seq(M + 1, M + nrow(est..))
+
+est.. <- est..[, c(13, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)]
+
+dbWriteTable(conn, "estudiantes", value = est.., append = TRUE, 
+             row.names = FALSE)
+
+# Graduados del 2014:
+
+grad <- dbGetQuery(conn, "SELECT carne, EXTRACT(year FROM fecha_juramentacion) AS ano
+                   FROM graduados;")
+
+grad20141 <- read_delim("F:/Practica II/Graduados I - 2014.csv", 
+                        ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(grad20141) %<>% tolower()
+grad20141$fecha_juramentacion %<>% dmy()
+grad20141$ano <- year(grad20141$fecha_juramentacion)
+grad20141$cod_titulo %<>% as.character()
+
+grad. <- anti_join(grad20141, grad)
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM graduados;")
+M %<>% as.numeric()
+
+grad. <- grad.[, -8]
+
+grad.$id <- seq(M + 1, M + nrow(grad.))
+
+grad. <- grad.[, c(8, 1, 2, 3, 4, 5, 6, 7)]
+
+dbWriteTable(conn, "graduados", value = grad., append = TRUE, 
+             row.names = FALSE)
+
+grad20142 <- read_delim("F:/Practica II/Graduados II - 2014.csv", 
+                        ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(grad20142) %<>% tolower()
+grad20142$fecha_juramentacion %<>% dmy()
+grad20142$ano <- year(grad20142$fecha_juramentacion)
+grad20142$cod_titulo %<>% as.character()
+
+grad <- dbGetQuery(conn, "SELECT carne, EXTRACT(year FROM fecha_juramentacion) AS ano
+                   FROM graduados;")
+
+grad.. <- anti_join(grad20142, grad)
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM graduados;")
+M %<>% as.numeric()
+
+grad.. <- grad..[, -8]
+
+grad..$id <- seq(M + 1, M + nrow(grad..))
+
+grad.. <- grad..[, c(8, 1, 2, 3, 4, 5, 6, 7)]
+
+dbWriteTable(conn, "graduados", value = grad.., append = TRUE, 
+             row.names = FALSE)
+
+# Notas del 2014:
+
+notas20141 <- read_delim("F:/Practica II/Notas I - 2014.csv", 
+                         ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(notas20141) %<>% tolower()
+
+notas20141$nota_ordinaria_alf %<>% as.numeric()
+notas20141$nota_ordinaria_alf[is.na(notas20141$nota_ordinaria_alf)] <- 0
+notas20141$periodo <- "1"
+notas20141$ano <- 2014
+notas20141$creditos %<>% gsub(",0", "", .)
+notas20141$creditos %<>% as.numeric()
+
+notas <- dbGetQuery(conn, "SELECT * FROM cursos;")
+uni <- unique(cbind(notas$sigla, notas$nombre_curso))
+notas20141$nombre_curso <- ""
+for(i in 1:nrow(notas20141)) {
+  notas20141$nombre_curso[i] <- uni[which(uni == notas20141$sigla[i])[1], 2]
+}
+
+notas. <- anti_join(notas20141, notas)
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM cursos;")
+M %<>% as.numeric()
+
+notas.$id <- seq(M + 1, M + nrow(notas.))
+names(notas.)[7] <- "nota_ordinaria_num"
+notas. <- notas.[, -5]
+
+notas. <- notas.[, c(11, 1, 3, 2, 4, 5, 10, 6, 7, 8, 9)]
+
+dbWriteTable(conn, "cursos", value = notas., append = TRUE, 
+             row.names = FALSE)
+
+notas20142 <- read_delim("F:/Practica II/Notas II - 2014.csv", 
+                         ";", escape_double = FALSE, trim_ws = TRUE)
+
+names(notas20142) %<>% tolower()
+names(notas20142)[1] <- "ano"
+notas20142$nota_ordinaria_alf %<>% as.numeric()
+notas20142$nota_ordinaria_alf[is.na(notas20142$nota_ordinaria_alf)] <- 0
+notas20142 <- notas20142[, -7]
+notas20142$periodo %<>% as.character()
+
+notas <- dbGetQuery(conn, "SELECT * FROM cursos;")
+
+notas.. <- anti_join(notas20142, notas)
+
+M <- dbGetQuery(conn, "SELECT max(id) FROM cursos;")
+M %<>% as.numeric()
+
+notas..$id <- seq(M + 1, M + nrow(notas..))
+names(notas..)[9] <- "nota_ordinaria_num"
+
+notas.. <- notas..[, c(11, 3, 5, 4, 6, 7, 8, 9, 10, 2, 1)]
+
+dbWriteTable(conn, "cursos", value = notas.., append = TRUE, 
              row.names = FALSE)
